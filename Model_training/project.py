@@ -13,23 +13,32 @@ import numpy as np
 from typing import Dict, Any
 import joblib 
 
-def load_data(input_path: str, correlation_threshold: float = 0.2) -> pd.DataFrame:
+
+def load_data(input_path: str, correlation_threshold: float = 0.25, plot: bool = True, file_type: str = "pickle") -> pd.DataFrame:
     """
-    Load data from a pickle file, select features based on correlation with 'Price',
-    and display a heatmap and scatter plots of selected features with 'Price'.
+    Load data from a file (pickle or CSV), select features based on correlation with 'Price',
+    and optionally display a heatmap and scatter plots of selected features with 'Price'.
     
     Args:
-        input_path (str): Path to the pickle file
-        correlation_threshold (float): Minimum correlation threshold for feature selection
+        input_path (str): Path to the data file.
+        correlation_threshold (float): Minimum correlation threshold for feature selection.
+        plot (bool): Whether to display plots for correlation heatmap and scatter plots. Default is True.
+        file_type (str): Type of file to load ('pickle' or 'csv'). Default is 'pickle'.
 
     Returns:
-        pd.DataFrame: DataFrame containing only features with correlation above the threshold with 'Price'
+        pd.DataFrame: DataFrame containing only features with correlation above the threshold with 'Price'.
     """
 
-    # Load the data
-    print("Loading data from:", input_path)
+    # Load the data based on file type
+    print(f"Loading data from: {input_path}")
     pd.set_option('display.max_columns', None)
-    df = pd.read_pickle(input_path)
+    
+    if file_type == "pickle":
+        df = pd.read_pickle(input_path)
+    elif file_type == "csv":
+        df = pd.read_csv(input_path)
+    else:
+        raise ValueError("Invalid file_type specified. Use 'pickle' or 'csv'.")
 
     # Check for missing values
     missing_values = df.isnull().sum()
@@ -68,27 +77,30 @@ def load_data(input_path: str, correlation_threshold: float = 0.2) -> pd.DataFra
     if non_numeric_columns:
         print("Non-numeric columns to encode:", non_numeric_columns)
 
-    # Display heatmap of correlations
-    plt.figure(figsize=(10, 6))
-    sns.heatmap(df_selected.corr(), annot=True, cmap='coolwarm', fmt=".2f")
-    plt.title("Correlation Heatmap of Selected Features")
-    plt.show()
+    # Plotting section
+    if plot:
+        # Display heatmap of correlations
+        plt.figure(figsize=(10, 6))
+        sns.heatmap(df_selected.corr(), annot=True, cmap='coolwarm', fmt=".2f")
+        plt.title("Correlation Heatmap of Selected Features")
+        plt.show()
 
-    # Generate scatter plots for each selected feature against Price
-    for feature in df_selected.columns:
-        if feature != 'Price':
-            plt.figure(figsize=(6, 4))
-            sns.scatterplot(data=df_selected, x=feature, y='Price')
-            plt.title(f"Scatter Plot of {feature} vs Price")
-            plt.xlabel(feature)
-            plt.ylabel("Price")
-            plt.show()
+        # Generate scatter plots for each selected feature against Price
+        for feature in df_selected.columns:
+            if feature != 'Price':
+                plt.figure(figsize=(6, 4))
+                sns.scatterplot(data=df_selected, x=feature, y='Price')
+                plt.title(f"Scatter Plot of {feature} vs Price")
+                plt.xlabel(feature)
+                plt.ylabel("Price")
+                plt.show()
 
+    # Display basic information about the selected data
     display(df_selected.info())
     display(df_selected.head())
     display(df_selected.describe())
+    
     return df_selected
-
 
 def create_model_pipeline(model: Any) -> Pipeline:
     """
@@ -229,12 +241,16 @@ def hyperparameter_tuning(
 
 
 
+
+
+
+
 models = {
     'Linear Regression': LinearRegression(),
     'Ridge Regression': Ridge(),
     'Lasso Regression': Lasso(),
     'Random Forest': RandomForestRegressor(),
-    'XGBoost': xgb.XGBRegressor(eval_metric='rmse', use_label_encoder=False)
+    'XGBoost': xgb.XGBRegressor(eval_metric='rmse')
 }
 
 # Define hyperparameter distributions
@@ -247,8 +263,8 @@ param_distributions = {
     }
 
 # Load your data
-input_path = r'data\clean\after_step_4_correlation.pkl'
-df_selected = load_data(input_path)
+input_path = r'output/my_data_step5.csv'
+df_selected = load_data(input_path = input_path, file_type='csv')
 
 # Split data into features and target
 X = df_selected.drop(columns=['Price'])  # Assuming 'Price' is the target
